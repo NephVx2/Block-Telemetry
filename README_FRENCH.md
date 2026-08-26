@@ -179,7 +179,7 @@ Utiliser l'option de menu **[1]** a tout moment pour afficher la liste complete 
 | S6 | Marqueur unique dans le fichier hosts pour identifier exactement ce que ce script a ajoute |
 | S7 | Aucune modification de registre, aucun service arrete, aucun pilote touche |
 | S8 | Option "Mettre a jour" integree (restaure + re-applique en une etape) |
-| S9 | Encodage UTF-8 sans BOM garanti (compatible PowerShell 5 et 7) |
+| S9 | Encodage UTF-8 **avec BOM** garanti — indispensable pour que PowerShell 5.1 detecte correctement l'UTF-8 (PowerShell 7 gere les deux cas, avec ou sans BOM) |
 | S10 | Verification des doublons avant ecriture (domaines deja presents ignores) |
 | S11 | Detection de conflits avec d'autres outils modifiant hosts (CTT WinUtil, StevenBlack hosts, HostsMan, Spybot Anti-Beacon, MVPS Hosts...) |
 | S12 | Verification d'integrite du bloc actif (domaines attendus vs domaines reellement presents) |
@@ -345,6 +345,12 @@ Les 7 verifications sont des controles de coherence interne sur les listes de do
 <summary><strong>La restauration n'a pas completement nettoye mon fichier hosts</strong></summary>
 
 La restauration ne supprime que ce qui se trouve entre les marqueurs propres a ce script. Si des entrees ont ete ajoutees en dehors de ce bloc (manuellement, ou par un autre outil), elles sont volontairement laissees intactes — utiliser l'option `[9]` pour detecter et nettoyer separement, si souhaite, ces entrees externes.
+</details>
+
+<details>
+<summary><strong>Le script echoue au parsing sous PowerShell 5.1 ("Jeton inattendu" pres d'un texte accentue)</strong></summary>
+
+Corrige en v5.2. Sans BOM UTF-8, PowerShell 5.1 lit le fichier `.ps1` avec l'encodage ANSI par defaut du systeme, ce qui corrompt les caracteres accentues (é, à, le tiret cadratin —, etc.) et peut casser une chaine en plein milieu du parsing. PowerShell 7 n'a pas ce probleme car il utilise l'UTF-8 par defaut, avec ou sans BOM — d'ou le fait que le script pouvait sembler "fonctionner" sous `pwsh` tout en echouant sous `powershell.exe`. Si vous avez une ancienne copie du script, retelechargez la v5.2 ou plus recente, ou re-enregistrez le fichier vous-meme en **UTF-8 avec BOM**.
 </details>
 
 ---
