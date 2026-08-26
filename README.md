@@ -179,7 +179,7 @@ Use menu option **[1]** at any time to print the complete, current list grouped 
 | S6 | Unique marker in `hosts` to identify exactly what this script added |
 | S7 | No registry changes, no services stopped, no drivers touched |
 | S8 | Built-in "Update" option (restore + re-apply in one step) |
-| S9 | Guaranteed UTF-8 without BOM encoding (compatible with PowerShell 5 and 7) |
+| S9 | Guaranteed UTF-8 **with BOM** encoding — required for PowerShell 5.1 to detect UTF-8 correctly (PowerShell 7 handles both, with or without BOM) |
 | S10 | Duplicate check before writing (domains already present are skipped) |
 | S11 | Conflict detection with other hosts-editing tools (CTT WinUtil, StevenBlack hosts, HostsMan, Spybot Anti-Beacon, MVPS Hosts...) |
 | S12 | Active-block integrity check (expected domains vs. domains actually present) |
@@ -345,6 +345,12 @@ All 7 checks are internal consistency checks on the domain/whitelist lists thems
 <summary><strong>Restoring didn't fully clean up my hosts file</strong></summary>
 
 Restore only removes what's between this script's own markers. If entries were added outside that block (manually, or by another tool), they are intentionally left alone — use option `[9]` to detect and optionally clean up those external entries separately.
+</details>
+
+<details>
+<summary><strong>Script fails to parse on PowerShell 5.1 ("Unexpected token" near accented text)</strong></summary>
+
+Fixed in v5.2. Without a UTF-8 BOM, PowerShell 5.1 falls back to the system ANSI codepage when reading a `.ps1` file, which corrupts accented characters (é, à, the em dash —, etc.) and can break string literals mid-parse. PowerShell 7 doesn't have this issue since it defaults to UTF-8 regardless of BOM — which is why the script could appear to "work fine" on `pwsh` while failing on `powershell.exe`. If you're on an older copy of the script, re-download v5.2 or later, or re-save the file as **UTF-8 with BOM** yourself.
 </details>
 
 ---
