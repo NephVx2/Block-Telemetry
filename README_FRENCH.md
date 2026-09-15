@@ -27,11 +27,13 @@ Script PowerShell autonome qui bloque les domaines de télémétrie, d'analytics
 
 ## Presentation
 
-`Block-Telemetry_v5_2.ps1` modifie **un seul fichier** : le fichier `hosts` de Windows (`C:\Windows\System32\drivers\etc\hosts`). Il ajoute un bloc clairement delimite d'entrees `0.0.0.0 <domaine>` pour des domaines connus de telemetrie, d'analytics et de tracking, de sorte que la resolution DNS de ces domaines echoue localement — aucun trafic ne les atteint.
+`Block-Telemetry.ps1` modifie **un seul fichier** : le fichier `hosts` de Windows (`C:\Windows\System32\drivers\etc\hosts`). Il ajoute un bloc clairement delimite d'entrees `0.0.0.0 <domaine>` pour des domaines connus de telemetrie, d'analytics et de tracking, de sorte que la resolution DNS de ces domaines echoue localement — aucun trafic ne les atteint.
 
 Il ne touche **pas** au registre, n'arrete aucun service Windows, n'installe rien, et ne modifie aucun autre fichier que `hosts` (a l'exception de ses propres sauvegardes/logs/rapports sur le Bureau).
 
 Le script fonctionne comme un **menu interactif** — il n'existe pas de commande "nettoyer en un coup" en ligne de commande pour l'action de blocage elle-meme (seul `-SelfTest` est un vrai parametre CLI). C'est voulu : modifier `hosts` est une modification durable (contrairement a un nettoyage ponctuel), donc le script garde un humain dans la boucle pour appliquer, mettre a jour et restaurer.
+
+> **Note :** depuis la v5.3, l'interface du script (console, menu interactif, rapport HTML) est entierement en anglais. Ce README reste en francais, mais tout ce que vous verrez a l'ecran en lancant le script sera en anglais.
 
 ---
 
@@ -40,16 +42,18 @@ Le script fonctionne comme un **menu interactif** — il n'existe pas de command
 1. Toutes les modifications vivent dans un seul bloc clairement delimite dans `hosts` :
 
    ```
-   # === BLOC TELEMETRIE - Ne pas modifier manuellement ===
-   # Généré le 18/08/2026 10:00:00
-   # Pour restaurer : relancer ce script et choisir option 5
+   # === TELEMETRY BLOCK - Do not modify manually ===
+   # Generated on 18 Aug 2026 10:00:00
+   # To restore: rerun this script and choose option 5
    #
-   # -- Microsoft Telemetrie --
+   # -- Microsoft Telemetry --
    0.0.0.0 vortex.data.microsoft.com
    0.0.0.0 telecommand.telemetry.microsoft.com
    ...
-   # === FIN BLOC TELEMETRIE ===
+   # === END TELEMETRY BLOCK ===
    ```
+
+   *(Depuis la v5.3, le bloc et tout le texte affiché par le script — console et rapport HTML — sont entièrement en anglais ; seule cette documentation reste en français.)*
 
    Tout ce qui se trouve en dehors de ces deux marqueurs reste totalement intact — vos propres entrees manuelles dans `hosts`, les entrees d'autres outils, tout.
 
@@ -199,14 +203,14 @@ Utiliser l'option de menu **[1]** a tout moment pour afficher la liste complete 
 
 ## Premier lancement (pas a pas)
 
-1. Copier `Block-Telemetry_v5_2.ps1` sur la machine cible.
+1. Copier `Block-Telemetry.ps1` sur la machine cible.
 
 2. Ouvrir un terminal PowerShell (pas besoin de le lancer en admin a la main — le script s'auto-eleve, sauf pour l'etape 3 ci-dessous).
 
 3. Lancer d'abord le self-test logique — il est en lecture seule, ne necessite **pas** de droits admin, et ne touche pas a `hosts` :
 
    ```powershell
-   .\Block-Telemetry_v5_2.ps1 -SelfTest
+   .\Block-Telemetry.ps1 -SelfTest
    ```
 
    Execute 7 verifications : la liste blanche n'a pas de doublons internes, aucun domaine n'est a la fois bloque et en liste blanche, la correspondance de la liste blanche est exacte (pas par sous-domaine), la liste de domaines se construit sans doublon, les deux marqueurs sont distincts, et `Get-IntegrityStatus`/`Test-IsAlreadyBlocked` s'executent sans lever d'exception. Le script quitte ensuite sans avoir touche a aucun fichier.
@@ -214,13 +218,13 @@ Utiliser l'option de menu **[1]** a tout moment pour afficher la liste complete 
 4. Lancer le script normalement (il demandera l'elevation) :
 
    ```powershell
-   .\Block-Telemetry_v5_2.ps1
+   .\Block-Telemetry.ps1
    ```
 
 5. Depuis le menu, previsualiser ce qui se passerait **sans rien changer** :
 
    ```
-   [4] Simuler sans modifier (DryRun)
+   [4] Simulate without modifying (DryRun)
    ```
 
    Affiche chaque domaine qui serait ajoute et chaque doublon qui serait ignore, exactement comme le ferait l'option [2] pour de vrai, mais n'ecrit rien.
@@ -228,13 +232,13 @@ Utiliser l'option de menu **[1]** a tout moment pour afficher la liste complete 
 6. Optionnel : revoir la liste complete des domaines et l'apercu de la liste blanche :
 
    ```
-   [1] Voir les domaines qui seront bloqués
+   [1] View the domains that will be blocked
    ```
 
 7. Appliquer le blocage pour de vrai :
 
    ```
-   [2] Appliquer le blocage
+   [2] Apply blocking
    ```
 
    Cree une sauvegarde, ecrit le bloc dans `hosts`, vide le cache DNS, et ecrit un instantane JSON de l'action.
@@ -289,7 +293,7 @@ Toutes les autres actions (appliquer, mettre a jour, simuler, restaurer, rapport
 | `%SystemRoot%\System32\drivers\etc\hosts` | Le seul fichier reellement modifie — entrees de blocage ajoutees dans le bloc marque |
 | `%USERPROFILE%\Desktop\Hosts_Backups\hosts_backup_<horodatage>` | Copie complete de hosts prise avant chaque ecriture reelle (rotation automatique, 10 dernieres conservees) |
 | `%USERPROFILE%\Desktop\Block-Telemetry_Log.txt` | Journal d'actions en texte brut (ajout uniquement) |
-| `%USERPROFILE%\Desktop\Rapports_Maintenance\Block-Telemetry\Block-Telemetry_<horodatage>.json` | Instantane JSON ecrit apres chaque action reelle (Application / Mise a jour / Restauration) — type d'action, nombre de domaines, repartition par categorie |
+| `%USERPROFILE%\Desktop\Maintenance_Reports\Block-Telemetry\Block-Telemetry_<horodatage>.json` | Instantane JSON ecrit apres chaque action reelle (Apply / Update / Restore) — type d'action, nombre de domaines, repartition par categorie |
 | `%USERPROFILE%\Desktop\Block-Telemetry_Export_<horodatage>.txt` | Cree uniquement via l'option de menu `[E]` — export texte de la liste de domaines active |
 | Rapport HTML (option de menu `[8]`) | Rapport visuel, genere a la demande |
 
