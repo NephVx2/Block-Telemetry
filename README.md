@@ -27,7 +27,7 @@ Standalone PowerShell script that blocks telemetry, analytics, and third-party t
 
 ## Overview
 
-`Block-Telemetry_v5_2.ps1` edits **one file only**: the Windows `hosts` file (`C:\Windows\System32\drivers\etc\hosts`). It appends a clearly marked block of `0.0.0.0 <domain>` entries for known telemetry, analytics, and tracking domains, so that DNS resolution for those domains fails locally — no traffic reaches them.
+`Block-Telemetry.ps1` edits **one file only**: the Windows `hosts` file (`C:\Windows\System32\drivers\etc\hosts`). It appends a clearly marked block of `0.0.0.0 <domain>` entries for known telemetry, analytics, and tracking domains, so that DNS resolution for those domains fails locally — no traffic reaches them.
 
 It does **not** touch the registry, does not stop any Windows service, does not install anything, and does not modify any file other than `hosts` (plus its own backups/logs/reports on the Desktop).
 
@@ -40,15 +40,15 @@ The script runs as an **interactive menu** — there is no one-shot "just clean 
 1. All changes live inside a single clearly delimited block in `hosts`:
 
    ```
-   # === BLOC TELEMETRIE - Ne pas modifier manuellement ===
-   # Généré le 18/08/2026 10:00:00
-   # Pour restaurer : relancer ce script et choisir option 5
+   # === TELEMETRY BLOCK - Do not modify manually ===
+   # Generated on 18 Aug 2026 10:00:00
+   # To restore: rerun this script and choose option 5
    #
-   # -- Microsoft Telemetrie --
+   # -- Microsoft Telemetry --
    0.0.0.0 vortex.data.microsoft.com
    0.0.0.0 telecommand.telemetry.microsoft.com
    ...
-   # === FIN BLOC TELEMETRIE ===
+   # === END TELEMETRY BLOCK ===
    ```
 
    Everything outside these two markers is left completely untouched — your own manual `hosts` entries, entries from other tools, everything.
@@ -199,14 +199,14 @@ Use menu option **[1]** at any time to print the complete, current list grouped 
 
 ## First run (step by step)
 
-1. Copy `Block-Telemetry_v5_2.ps1` to the target machine.
+1. Copy `Block-Telemetry.ps1` to the target machine.
 
 2. Open a PowerShell terminal (no need to run it as admin manually — the script self-elevates, except for step 3 below).
 
 3. Run the logic self-test first — this is read-only, requires **no** admin rights, and does not touch `hosts`:
 
    ```powershell
-   .\Block-Telemetry_v5_2.ps1 -SelfTest
+   .\Block-Telemetry.ps1 -SelfTest
    ```
 
    Runs 7 checks: whitelist has no internal duplicates, no domain is both blocked and whitelisted, whitelist matching is exact (not by subdomain), the domain list builds without duplicates, the two markers are distinct, and both `Get-IntegrityStatus`/`Test-IsAlreadyBlocked` run without throwing. The script then exits without touching any files.
@@ -214,13 +214,13 @@ Use menu option **[1]** at any time to print the complete, current list grouped 
 4. Launch the script normally (it will prompt for elevation):
 
    ```powershell
-   .\Block-Telemetry_v5_2.ps1
+   .\Block-Telemetry.ps1
    ```
 
 5. From the menu, preview what would happen **without changing anything**:
 
    ```
-   [4] Simuler sans modifier (DryRun)
+   [4] Simulate without modifying (DryRun)
    ```
 
    This prints every domain that would be added and every one skipped as a duplicate, exactly as option [2] would do for real, but writes nothing.
@@ -228,13 +228,13 @@ Use menu option **[1]** at any time to print the complete, current list grouped 
 6. Optionally review the full domain list and the whitelist preview:
 
    ```
-   [1] Voir les domaines qui seront bloqués
+   [1] View the domains that will be blocked
    ```
 
 7. Apply the block for real:
 
    ```
-   [2] Appliquer le blocage
+   [2] Apply blocking
    ```
 
    This creates a backup, writes the block to `hosts`, flushes the DNS cache, and writes a JSON snapshot of the action.
@@ -289,7 +289,7 @@ Every other action (apply, update, dry-run, restore, reports, exports) is menu-d
 | `%SystemRoot%\System32\drivers\etc\hosts` | The only file actually modified — telemetry-blocking entries appended inside the marked block |
 | `%USERPROFILE%\Desktop\Hosts_Backups\hosts_backup_<timestamp>` | Full copy of `hosts` taken before every real write (rotated automatically, last 10 kept) |
 | `%USERPROFILE%\Desktop\Block-Telemetry_Log.txt` | Plain-text action log (append-only) |
-| `%USERPROFILE%\Desktop\Rapports_Maintenance\Block-Telemetry\Block-Telemetry_<timestamp>.json` | JSON snapshot written after every real action (Apply / Update / Restore) — action type, domain counts, per-category breakdown |
+| `%USERPROFILE%\Desktop\Maintenance_Reports\Block-Telemetry\Block-Telemetry_<timestamp>.json` | JSON snapshot written after every real action (Apply / Update / Restore) — action type, domain counts, per-category breakdown |
 | `%USERPROFILE%\Desktop\Block-Telemetry_Export_<timestamp>.txt` | Only created via menu option `[E]` — plain-text export of the active domain list |
 | HTML report (menu option `[8]`) | Visual report, generated on demand |
 
