@@ -8,8 +8,22 @@ Standalone PowerShell script that blocks telemetry, analytics, and third-party t
 
 ---
 
+## Screenshots
+
+<table>
+<tr>
+<td><img src="https://raw.githubusercontent.com/NephVx2/Block-Telemetry/main/screenshots/01-menu-preview.png" width="420"></td>
+<td><img src="https://raw.githubusercontent.com/NephVx2/Block-Telemetry/main/screenshots/05-html-preview.png" width="420"></td>
+</tr>
+</table>
+
+More screenshots (integrity check, backups list, full HTML report) in the [`screenshots/`](screenshots) folder.
+
+---
+
 ## Table of contents
 
+- [Screenshots](#screenshots)
 - [Overview](#overview)
 - [How it works](#how-it-works)
 - [What gets blocked](#what-gets-blocked)
@@ -64,6 +78,8 @@ The script runs as an **interactive menu** — there is no one-shot "just clean 
 ## What gets blocked
 
 15 categories, **228 domains** in total:
+
+<img src="https://raw.githubusercontent.com/NephVx2/Block-Telemetry/main/screenshots/08-categories-covered.png" width="600">
 
 <details>
 <summary><strong>Microsoft Telemetry</strong> — 80 domains</summary>
