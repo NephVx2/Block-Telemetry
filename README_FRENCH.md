@@ -8,8 +8,22 @@ Script PowerShell autonome qui bloque les domaines de télémétrie, d'analytics
 
 ---
 
+## Captures d'ecran
+
+<table>
+<tr>
+<td><img src="https://raw.githubusercontent.com/NephVx2/Block-Telemetry/main/screenshots/01-menu-preview.png" width="420"></td>
+<td><img src="https://raw.githubusercontent.com/NephVx2/Block-Telemetry/main/screenshots/05-html-preview.png" width="420"></td>
+</tr>
+</table>
+
+Plus de captures (verification d'integrite, liste des sauvegardes, rapport HTML complet) dans le dossier [`screenshots/`](screenshots).
+
+---
+
 ## Sommaire
 
+- [Captures d'ecran](#captures-decran)
 - [Presentation](#presentation)
 - [Fonctionnement](#fonctionnement)
 - [Ce qui est bloque](#ce-qui-est-bloque)
@@ -68,6 +82,8 @@ Le script fonctionne comme un **menu interactif** — il n'existe pas de command
 ## Ce qui est bloque
 
 15 categories, **228 domaines** au total :
+
+<img src="https://raw.githubusercontent.com/NephVx2/Block-Telemetry/main/screenshots/08-categories-covered.png" width="600">
 
 <details>
 <summary><strong>Microsoft Telemetrie</strong> — 80 domaines</summary>
