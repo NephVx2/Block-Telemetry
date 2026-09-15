@@ -229,7 +229,7 @@ Utiliser l'option de menu **[1]** a tout moment pour afficher la liste complete 
    .\Block-Telemetry.ps1 -SelfTest
    ```
 
-   Execute 7 verifications : la liste blanche n'a pas de doublons internes, aucun domaine n'est a la fois bloque et en liste blanche, la correspondance de la liste blanche est exacte (pas par sous-domaine), la liste de domaines se construit sans doublon, les deux marqueurs sont distincts, et `Get-IntegrityStatus`/`Test-IsAlreadyBlocked` s'executent sans lever d'exception. Le script quitte ensuite sans avoir touche a aucun fichier.
+   Execute 8 verifications : la liste blanche n'a pas de doublons internes, aucun domaine n'est a la fois bloque et en liste blanche, la correspondance de la liste blanche est exacte (pas par sous-domaine), `Get-DomainsToBlock` retourne une liste non vide, la liste de domaines se construit sans doublon, les deux marqueurs sont distincts, et `Get-IntegrityStatus`/`Test-IsAlreadyBlocked` s'executent sans lever d'exception. Le script quitte ensuite sans avoir touche a aucun fichier.
 
 4. Lancer le script normalement (il demandera l'elevation) :
 
@@ -296,7 +296,7 @@ L'en-tete du menu affiche toujours le statut actuel en un coup d'oeil : si un bl
 
 | Parametre | Description |
 |---|---|
-| `-SelfTest` | Execute les 7 verifications logiques en lecture seule decrites dans [Premier lancement](#premier-lancement-pas-a-pas) puis quitte. Aucun droit admin requis, aucun fichier touche. |
+| `-SelfTest` | Execute les 8 verifications logiques en lecture seule decrites dans [Premier lancement](#premier-lancement-pas-a-pas) puis quitte. Aucun droit admin requis, aucun fichier touche. |
 
 Toutes les autres actions (appliquer, mettre a jour, simuler, restaurer, rapports, exports) passent par le menu — il n'existe volontairement pas de parametres CLI equivalents, puisqu'il s'agit de modifications durables d'un fichier systeme plutot que de taches de maintenance ponctuelles.
 
@@ -358,7 +358,7 @@ Le script vide automatiquement le cache DNS apres chaque modification reelle (ou
 <details>
 <summary><strong>-SelfTest signale un FAIL</strong></summary>
 
-Les 7 verifications sont des controles de coherence interne sur les listes de domaines/liste blanche elles-memes (doublons, contradictions, logique de correspondance exacte) — un FAIL ici signifie que les listes de domaines ont ete modifiees d'une maniere qui a introduit une incoherence, pas un probleme au niveau du systeme. Lire le detail affiche par la verification pour identifier le domaine ou le nombre concerne.
+Les 8 verifications sont des controles de coherence interne sur les listes de domaines/liste blanche elles-memes (doublons, contradictions, logique de correspondance exacte) — un FAIL ici signifie que les listes de domaines ont ete modifiees d'une maniere qui a introduit une incoherence, pas un probleme au niveau du systeme. Lire le detail affiche par la verification pour identifier le domaine ou le nombre concerne.
 </details>
 
 <details>
