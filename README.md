@@ -225,7 +225,7 @@ Use menu option **[1]** at any time to print the complete, current list grouped 
    .\Block-Telemetry.ps1 -SelfTest
    ```
 
-   Runs 7 checks: whitelist has no internal duplicates, no domain is both blocked and whitelisted, whitelist matching is exact (not by subdomain), the domain list builds without duplicates, the two markers are distinct, and both `Get-IntegrityStatus`/`Test-IsAlreadyBlocked` run without throwing. The script then exits without touching any files.
+   Runs 8 checks: whitelist has no internal duplicates, no domain is both blocked and whitelisted, whitelist matching is exact (not by subdomain), `Get-DomainsToBlock` returns a non-empty list, the domain list builds without duplicates, the two markers are distinct, and both `Get-IntegrityStatus` and `Test-IsAlreadyBlocked` run without throwing. The script then exits without touching any files.
 
 4. Launch the script normally (it will prompt for elevation):
 
@@ -292,7 +292,7 @@ The menu header always shows the current status at a glance: whether a block is 
 
 | Parameter | Description |
 |---|---|
-| `-SelfTest` | Runs the 7 read-only logic checks described in [First run](#first-run-step-by-step) and exits. No admin rights required, no files touched. |
+| `-SelfTest` | Runs the 8 read-only logic checks described in [First run](#first-run-step-by-step) and exits. No admin rights required, no files touched. |
 
 Every other action (apply, update, dry-run, restore, reports, exports) is menu-driven — there are intentionally no equivalent CLI switches, since these are standing changes to a system file rather than one-off maintenance tasks.
 
@@ -354,7 +354,7 @@ The script flushes the DNS cache automatically after every real change (or via o
 <details>
 <summary><strong>-SelfTest reports a FAIL</strong></summary>
 
-All 7 checks are internal consistency checks on the domain/whitelist lists themselves (duplicates, contradictions, exact-match logic) — a FAIL here means the domain lists were edited in a way that introduced an inconsistency, not a system-level problem. Read the check's `Detail` output for the specific domain or count involved.
+All 8 checks are internal consistency checks on the domain/whitelist lists themselves (duplicates, contradictions, exact-match logic) — a FAIL here means the domain lists were edited in a way that introduced an inconsistency, not a system-level problem. Read the check's `Detail` output for the specific domain or count involved.
 </details>
 
 <details>
