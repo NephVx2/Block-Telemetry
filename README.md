@@ -217,9 +217,29 @@ Use menu option **[1]** at any time to print the complete, current list grouped 
 
 1. Copy `Block-Telemetry.ps1` to the target machine.
 
-2. Open a PowerShell terminal (no need to run it as admin manually — the script self-elevates, except for step 3 below).
+2. Open a PowerShell terminal (no need to run it as admin manually — the script self-elevates, except for step 4 below).
 
-3. Run the logic self-test first — this is read-only, requires **no** admin rights, and does not touch `hosts`:
+   Then go to the folder that contains the script (adjust the path; keep the quotes if it contains spaces):
+
+   ```powershell
+   cd "$HOME\Downloads"
+   ```
+
+3. **Unblock the script** if you downloaded it from the Internet. Windows flags downloaded files, and PowerShell's execution policy (`RemoteSigned`, for example) refuses to run a flagged script. From the script's folder:
+
+   ```powershell
+   Unblock-File .\Block-Telemetry.ps1
+   ```
+
+   If PowerShell says instead that running scripts is disabled on this system (the Windows default policy is `Restricted`), allow scripts for the current account first (the change applies to this account only, not to the whole machine):
+
+   ```powershell
+   Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+   ```
+
+   Still blocked? See the [step-by-step guide](https://github.com/NephVx2/Script-blocked-Look-at-this).
+
+4. Run the logic self-test first — this is read-only, requires **no** admin rights, and does not touch `hosts`:
 
    ```powershell
    .\Block-Telemetry.ps1 -SelfTest
@@ -227,13 +247,13 @@ Use menu option **[1]** at any time to print the complete, current list grouped 
 
    Runs 8 checks: whitelist has no internal duplicates, no domain is both blocked and whitelisted, whitelist matching is exact (not by subdomain), `Get-DomainsToBlock` returns a non-empty list, the domain list builds without duplicates, the two markers are distinct, and both `Get-IntegrityStatus` and `Test-IsAlreadyBlocked` run without throwing. The script then exits without touching any files.
 
-4. Launch the script normally (it will prompt for elevation):
+5. Launch the script normally (it will prompt for elevation):
 
    ```powershell
    .\Block-Telemetry.ps1
    ```
 
-5. From the menu, preview what would happen **without changing anything**:
+6. From the menu, preview what would happen **without changing anything**:
 
    ```
    [4] Simulate without modifying (DryRun)
@@ -241,13 +261,13 @@ Use menu option **[1]** at any time to print the complete, current list grouped 
 
    This prints every domain that would be added and every one skipped as a duplicate, exactly as option [2] would do for real, but writes nothing.
 
-6. Optionally review the full domain list and the whitelist preview:
+7. Optionally review the full domain list and the whitelist preview:
 
    ```
    [1] View the domains that will be blocked
    ```
 
-7. Apply the block for real:
+8. Apply the block for real:
 
    ```
    [2] Apply blocking
@@ -255,7 +275,7 @@ Use menu option **[1]** at any time to print the complete, current list grouped 
 
    This creates a backup, writes the block to `hosts`, flushes the DNS cache, and writes a JSON snapshot of the action.
 
-8. Confirm it's working: check option **[A]** (integrity) any time afterward, or from a different terminal:
+9. Confirm it's working: check option **[A]** (integrity) any time afterward, or from a different terminal:
 
    ```powershell
    Resolve-DnsName vortex-win.data.microsoft.com
@@ -263,7 +283,7 @@ Use menu option **[1]** at any time to print the complete, current list grouped 
 
    should fail to resolve (or resolve to `0.0.0.0`) once the block is active and the DNS cache has been flushed.
 
-9. To undo everything, use option **[5]** — this removes only this script's block, backing up the current state first, and leaves the rest of your `hosts` file untouched.
+10. To undo everything, use option **[5]** — this removes only this script's block, backing up the current state first, and leaves the rest of your `hosts` file untouched.
 
 ---
 
