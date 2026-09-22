@@ -221,9 +221,29 @@ Utiliser l'option de menu **[1]** a tout moment pour afficher la liste complete 
 
 1. Copier `Block-Telemetry.ps1` sur la machine cible.
 
-2. Ouvrir un terminal PowerShell (pas besoin de le lancer en admin a la main — le script s'auto-eleve, sauf pour l'etape 3 ci-dessous).
+2. Ouvrir un terminal PowerShell (pas besoin de le lancer en admin a la main — le script s'auto-eleve, sauf pour l'etape 4 ci-dessous).
 
-3. Lancer d'abord le self-test logique — il est en lecture seule, ne necessite **pas** de droits admin, et ne touche pas a `hosts` :
+   Puis se placer dans le dossier qui contient le script (adapter le chemin ; garder les guillemets s'il contient des espaces) :
+
+   ```powershell
+   cd "$HOME\Downloads"
+   ```
+
+3. **Debloquer le script** s'il a ete telecharge depuis Internet. Windows marque les fichiers telecharges, et la politique d'execution de PowerShell (`RemoteSigned`, par exemple) refuse de lancer un script marque. Depuis le dossier du script :
+
+   ```powershell
+   Unblock-File .\Block-Telemetry.ps1
+   ```
+
+   Si PowerShell indique plutot que l'execution de scripts est desactivee sur ce systeme (la politique par defaut de Windows est `Restricted`), autoriser d'abord les scripts pour le compte courant (la modification ne s'applique qu'a ce compte, pas a toute la machine) :
+
+   ```powershell
+   Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+   ```
+
+   Toujours bloque ? Voir le [guide pas a pas](https://github.com/NephVx2/Script-blocked-Look-at-this/blob/main/README_POWERSHELL_FRENCH.md).
+
+4. Lancer d'abord le self-test logique — il est en lecture seule, ne necessite **pas** de droits admin, et ne touche pas a `hosts` :
 
    ```powershell
    .\Block-Telemetry.ps1 -SelfTest
@@ -231,13 +251,13 @@ Utiliser l'option de menu **[1]** a tout moment pour afficher la liste complete 
 
    Execute 8 verifications : la liste blanche n'a pas de doublons internes, aucun domaine n'est a la fois bloque et en liste blanche, la correspondance de la liste blanche est exacte (pas par sous-domaine), `Get-DomainsToBlock` retourne une liste non vide, la liste de domaines se construit sans doublon, les deux marqueurs sont distincts, et `Get-IntegrityStatus`/`Test-IsAlreadyBlocked` s'executent sans lever d'exception. Le script quitte ensuite sans avoir touche a aucun fichier.
 
-4. Lancer le script normalement (il demandera l'elevation) :
+5. Lancer le script normalement (il demandera l'elevation) :
 
    ```powershell
    .\Block-Telemetry.ps1
    ```
 
-5. Depuis le menu, previsualiser ce qui se passerait **sans rien changer** :
+6. Depuis le menu, previsualiser ce qui se passerait **sans rien changer** :
 
    ```
    [4] Simulate without modifying (DryRun)
@@ -245,13 +265,13 @@ Utiliser l'option de menu **[1]** a tout moment pour afficher la liste complete 
 
    Affiche chaque domaine qui serait ajoute et chaque doublon qui serait ignore, exactement comme le ferait l'option [2] pour de vrai, mais n'ecrit rien.
 
-6. Optionnel : revoir la liste complete des domaines et l'apercu de la liste blanche :
+7. Optionnel : revoir la liste complete des domaines et l'apercu de la liste blanche :
 
    ```
    [1] View the domains that will be blocked
    ```
 
-7. Appliquer le blocage pour de vrai :
+8. Appliquer le blocage pour de vrai :
 
    ```
    [2] Apply blocking
@@ -259,7 +279,7 @@ Utiliser l'option de menu **[1]** a tout moment pour afficher la liste complete 
 
    Cree une sauvegarde, ecrit le bloc dans `hosts`, vide le cache DNS, et ecrit un instantane JSON de l'action.
 
-8. Confirmer que ca fonctionne : verifier l'option **[A]** (integrite) a tout moment ensuite, ou depuis un autre terminal :
+9. Confirmer que ca fonctionne : verifier l'option **[A]** (integrite) a tout moment ensuite, ou depuis un autre terminal :
 
    ```powershell
    Resolve-DnsName vortex-win.data.microsoft.com
@@ -267,7 +287,7 @@ Utiliser l'option de menu **[1]** a tout moment pour afficher la liste complete 
 
    devrait echouer a resoudre (ou resoudre vers `0.0.0.0`) une fois le blocage actif et le cache DNS vide.
 
-9. Pour tout annuler, utiliser l'option **[5]** — supprime uniquement le bloc de ce script, en sauvegardant l'etat actuel avant, et laisse le reste de votre fichier `hosts` intact.
+10. Pour tout annuler, utiliser l'option **[5]** — supprime uniquement le bloc de ce script, en sauvegardant l'etat actuel avant, et laisse le reste de votre fichier `hosts` intact.
 
 ---
 
