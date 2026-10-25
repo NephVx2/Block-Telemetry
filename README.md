@@ -12,8 +12,8 @@ Standalone PowerShell script that blocks telemetry, analytics, and third-party t
 
 <table>
 <tr>
-<td><img src="https://raw.githubusercontent.com/NephVx2/Block-Telemetry/main/screenshots/01-menu-preview.png?v=5.3.1" width="420"></td>
-<td><img src="https://raw.githubusercontent.com/NephVx2/Block-Telemetry/main/screenshots/05-html-preview.png?v=5.3.1" width="420"></td>
+<td><img src="https://raw.githubusercontent.com/NephVx2/Block-Telemetry/main/screenshots/01-menu-preview.png?v=5.4.0" width="420"></td>
+<td><img src="https://raw.githubusercontent.com/NephVx2/Block-Telemetry/main/screenshots/05-html-preview.png?v=5.4.0" width="420"></td>
 </tr>
 </table>
 
@@ -43,7 +43,7 @@ More screenshots (integrity check, backups list, full HTML report) in the [`scre
 
 `Block-Telemetry.ps1` edits **one file only**: the Windows `hosts` file (`C:\Windows\System32\drivers\etc\hosts`). It appends a clearly marked block of `0.0.0.0 <domain>` entries for known telemetry, analytics, and tracking domains, so that DNS resolution for those domains fails locally — no traffic reaches them.
 
-It does **not** touch the registry, does not stop any Windows service, does not install anything, and does not modify any file other than `hosts` (plus its own backups/logs/reports on the Desktop).
+It does **not** touch the registry, does not stop any Windows service, does not install anything, and does not modify any file other than `hosts` (plus its own backups/logs/reports in a `Maintenance_Reports\Block-Telemetry` folder on the Desktop).
 
 The script runs as an **interactive menu** — there is no one-shot "just clean it" command line invocation for the blocking action itself (only `-SelfTest` is a pure CLI flag). This is intentional: modifying `hosts` is a standing change (unlike a one-off cleanup), so the script keeps a human in the loop for applying, updating, and restoring it.
 
@@ -67,7 +67,7 @@ The script runs as an **interactive menu** — there is no one-shot "just clean 
 
    Everything outside these two markers is left completely untouched — your own manual `hosts` entries, entries from other tools, everything.
 
-2. Before **any** write to `hosts`, a timestamped backup is created in `Hosts_Backups` (see [Files written by the script](#files-written-by-the-script)). If the backup fails, the script refuses to modify `hosts` at all.
+2. Before **any** write to `hosts`, a timestamped backup is created in the `Hosts_Backups` subfolder (see [Files written by the script](#files-written-by-the-script)). If the backup fails, the script refuses to modify `hosts` at all.
 
 3. Domains already present anywhere in your `hosts` file (added manually or by another tool) are detected and skipped rather than duplicated.
 
@@ -79,7 +79,7 @@ The script runs as an **interactive menu** — there is no one-shot "just clean 
 
 15 categories, **227 domains** in total:
 
-<img src="https://raw.githubusercontent.com/NephVx2/Block-Telemetry/main/screenshots/08-categories-covered.png?v=5.3.1" width="600">
+<img src="https://raw.githubusercontent.com/NephVx2/Block-Telemetry/main/screenshots/08-categories-covered.png?v=5.4.0" width="600">
 
 <details>
 <summary><strong>Microsoft Telemetry</strong> — 80 domains</summary>
@@ -209,6 +209,7 @@ Use menu option **[1]** at any time to print the complete, current list grouped 
 - PowerShell 5.1 (built into Windows) or PowerShell 7+.
 - Administrator rights. The script self-elevates if launched from a non-admin session (UAC prompt) — except for `-SelfTest`, which runs read-only and does **not** require elevation.
 - Write access to `C:\Windows\System32\drivers\etc\hosts` (standard on any admin session).
+- Recommended: **Windows Terminal** (default on Windows 11) for the best rendering of the console interface (box-drawing characters and status icons). The classic console window works too, but some icons may depend on the selected font.
 - If the script is digitally signed (recommended in environments using `-ExecutionPolicy AllSigned`/`RemoteSigned`): the signing certificate must be trusted on the target machine, otherwise PowerShell will refuse to run it.
 
 ---
@@ -291,7 +292,7 @@ Use menu option **[1]** at any time to print the complete, current list grouped 
 
 | Option | Action |
 |---|---|
-| `[1]` | Print the full list of domains that would be blocked, grouped by category, plus a preview of the whitelist |
+| `[1]` | Print the full list of domains that would be blocked, grouped by category (with a domain count per category), plus a preview of the whitelist |
 | `[2]` | Apply the block for real (backup → write → flush DNS → JSON snapshot). If a block is already active, offers to update instead |
 | `[3]` | Update the list (restore, then re-apply) — use after pulling a newer version of the script with additional domains |
 | `[4]` | Dry-run: simulate option [2] without writing anything |
@@ -301,10 +302,12 @@ Use menu option **[1]** at any time to print the complete, current list grouped 
 | `[8]` | Generate an HTML report |
 | `[9]` | Detect conflicts with other `hosts`-editing tools, and optionally clean up entries outside this script's own block |
 | `[A]` | Check integrity of the active block (expected domains vs. domains actually present — flags anything missing or extra) |
-| `[E]` | Export the current active domain list to a `.txt` file on the Desktop |
+| `[E]` | Export the current active domain list to a `.txt` file in `Maintenance_Reports\Block-Telemetry` on the Desktop |
 | `[Q]` | Quit |
 
-The menu header always shows the current status at a glance: whether a block is active, how many domains, when it was applied, and a compact integrity indicator (reusing the same check as option `[A]`) so drift is visible without digging into the menu.
+The menu is organised in three groups — **Blocking**, **Backups & DNS** and **Reports & diagnostics** — under a **Status** panel that always shows, at a glance: whether a block is active, how many domains, when it was applied, and a compact integrity indicator (reusing the same check as option `[A]`) so drift is visible without digging into the menu.
+
+Every screen uses the same visual language: framed banners, `▸` section titles, and status icons (`✔` success, `✘` error, `▲` warning, `●` info, `○` skipped, `◆` simulation). Apply and Restore end with a framed result box.
 
 ---
 
@@ -323,11 +326,11 @@ Every other action (apply, update, dry-run, restore, reports, exports) is menu-d
 | File / folder | Content |
 |---|---|
 | `%SystemRoot%\System32\drivers\etc\hosts` | The only file actually modified — telemetry-blocking entries appended inside the marked block |
-| `%USERPROFILE%\Desktop\Hosts_Backups\hosts_backup_<timestamp>` | Full copy of `hosts` taken before every real write (rotated automatically, last 10 kept) |
-| `%USERPROFILE%\Desktop\Block-Telemetry_Log.txt` | Plain-text action log (append-only) |
+| `%USERPROFILE%\Desktop\Maintenance_Reports\Block-Telemetry\Hosts_Backups\hosts_backup_<timestamp>` | Full copy of `hosts` taken before every real write (rotated automatically, last 10 kept) |
+| `%USERPROFILE%\Desktop\Maintenance_Reports\Block-Telemetry\Block-Telemetry_Log.txt` | Plain-text action log (append-only) |
 | `%USERPROFILE%\Desktop\Maintenance_Reports\Block-Telemetry\Block-Telemetry_<timestamp>.json` | JSON snapshot written after every real action (Apply / Update / Restore) — action type, domain counts, per-category breakdown |
-| `%USERPROFILE%\Desktop\Block-Telemetry_Export_<timestamp>.txt` | Only created via menu option `[E]` — plain-text export of the active domain list |
-| HTML report (menu option `[8]`) | Visual report, generated on demand |
+| `%USERPROFILE%\Desktop\Maintenance_Reports\Block-Telemetry\Block-Telemetry_Export_<timestamp>.txt` | Only created via menu option `[E]` — plain-text export of the active domain list |
+| `%USERPROFILE%\Desktop\Maintenance_Reports\Block-Telemetry\Block-Telemetry_<timestamp>.html` | HTML report — only created via menu option `[8]`, generated on demand |
 
 Nothing is written outside these locations. `-DryRun` (menu option `[4]`) and `-SelfTest` write **no** files at all — no backup, no log, no JSON snapshot.
 
@@ -387,6 +390,12 @@ All 9 checks are internal consistency checks on the domain/whitelist lists thems
 <summary><strong>Restoring didn't fully clean up my hosts file</strong></summary>
 
 Restore only removes what's between this script's own markers. If entries were added outside that block (manually, or by another tool), they are intentionally left alone — use option `[9]` to detect and optionally clean up those external entries separately.
+</details>
+
+<details>
+<summary><strong>Some icons or box characters show up as squares or look misaligned</strong></summary>
+
+The console interface uses Unicode characters (box-drawing lines and status icons such as `✔ ✘ ▲ ● ○ ◆`). **Windows Terminal** displays them correctly out of the box. In the classic console window, the selected font may lack some of these glyphs — switch to a font such as **Cascadia Mono** or **Consolas**, or run the script from Windows Terminal. This is purely cosmetic and never affects what the script does.
 </details>
 
 <details>
