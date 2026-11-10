@@ -28,6 +28,7 @@ Plus de captures (vérification d'intégrité, liste des sauvegardes, rapport HT
 - [Fonctionnement](#fonctionnement)
 - [Ce qui est bloqué](#ce-qui-est-bloqué)
 - [Ce qui n'est jamais bloqué (liste blanche)](#ce-qui-nest-jamais-bloqué-liste-blanche)
+- [Protection cloud de Windows Defender](#protection-cloud-de-windows-defender)
 - [Garanties de sécurité](#garanties-de-sécurité)
 - [Prérequis](#prérequis)
 - [Premier lancement](#premier-lancement-pas-à-pas)
@@ -81,16 +82,16 @@ Le script fonctionne comme un **menu interactif** — il n'existe pas de command
 
 ## Ce qui est bloqué
 
-15 catégories, **227 domaines** au total :
+15 catégories, **225 domaines** au total :
 
 <img src="https://raw.githubusercontent.com/NephVx2/Block-Telemetry/main/screenshots/08-categories-covered.png?v=5.4.0" width="600">
 
 <details>
-<summary><strong>Microsoft Télémétrie</strong> — 80 domaines</summary>
+<summary><strong>Microsoft Télémétrie</strong> — 78 domaines</summary>
 
-Données de diagnostic Windows (pipelines DiagTrack / vortex / watson), pipeline de télémétrie Office/ARIA, télémétrie **cloud uniquement** de Windows Defender (pas la protection locale), points de collecte publicitaires/suggestions MSN/Cortana/Bing, télémétrie Xbox/Game Bar, télémétrie OneDrive (pas la synchronisation), télémétrie Teams (pas la communication).
+Données de diagnostic Windows (pipelines DiagTrack / vortex / watson), pipeline de télémétrie Office/ARIA, anciens noms MAPS/« SpyNet » de Defender (`spynet*`, laissés bloqués mais non vérifiés — voir les commentaires du script), point de terminaison Windows Live/OneDrive `ssw.live.com`, points de collecte publicitaires/suggestions MSN/Cortana/Bing, télémétrie Xbox/Game Bar, télémétrie OneDrive (pas la synchronisation), télémétrie Teams (pas la communication).
 
-*Exclus volontairement :* `windowsupdate.com`, `update.microsoft.com`, `msftconnecttest.com` (nécessaires aux mises à jour et à la détection de connectivite).
+*Exclus volontairement :* `windowsupdate.com`, `update.microsoft.com`, `msftconnecttest.com` (nécessaires aux mises à jour et à la détection de connectivité), ainsi que `wdcp.microsoft.com` / `wdcpalt.microsoft.com` (protection fournie par le cloud de Microsoft Defender — voir [Protection cloud de Windows Defender](#protection-cloud-de-windows-defender)).
 </details>
 
 <details>
@@ -173,10 +174,11 @@ Utiliser l'option de menu **[1]** à tout moment pour afficher la liste complèt
 
 ## Ce qui n'est jamais bloqué (liste blanche)
 
-**72 domaines** sont codes en dur dans une liste blanche absolue, vérifiée par **correspondance exacte uniquement** (jamais une correspondance de sous-domaine/sous-chaîne — voir la section SelfTest) — même si l'un d'eux se retrouvait par erreur dans la liste de télémétrie, il ne serait jamais écrit dans `hosts` :
+**74 domaines** sont codes en dur dans une liste blanche absolue, vérifiée par **correspondance exacte uniquement** (jamais une correspondance de sous-domaine/sous-chaîne — voir la section SelfTest) — même si l'un d'eux se retrouvait par erreur dans la liste de télémétrie, il ne serait jamais écrit dans `hosts` :
 
 - Activation, licences, enregistrement Adobe (`activate.adobe.com`, `genuine.adobe.com`, `lcs-cops.adobe.com`...)
 - Windows Update, activation, connexion Microsoft (`update.microsoft.com`, `login.microsoftonline.com`, `msftconnecttest.com`...)
+- Protection fournie par le cloud de Microsoft Defender (`wdcp.microsoft.com`, `wdcpalt.microsoft.com`)
 - Synchronisation OneDrive, authentification Xbox Live, communication Teams
 - NextDNS (service DNS critique)
 - Streaming/authentification/API Spotify, CDN `scdn.co`
@@ -184,6 +186,92 @@ Utiliser l'option de menu **[1]** à tout moment pour afficher la liste complèt
 - Plateforme Steam et anti-cheat, mises à jour pilotes NVIDIA/AMD
 - Discord (chat, CDN et envoi de pièces jointes — `discord-attachments-uploads-prd.storage.googleapis.com`), GOG Galaxy, mises à jour Visual Studio Code
 - Epic Games (garde en liste blanche par précaution à coût nul, même si non utilise activement, pour éviter un blocage accidentel si la liste est réutilisée ou étendue sur une autre machine plus tard)
+
+---
+
+## Protection cloud de Windows Defender
+
+### Pourquoi `wdcp.microsoft.com` et `wdcpalt.microsoft.com` ne sont jamais bloqués
+
+Ces deux noms d'hôte sont les points de terminaison de la **protection fournie par le cloud** de Microsoft Defender Antivirus, aussi appelée **MAPS** (*Microsoft Active Protection Service*, anciennement *SpyNet*). Microsoft les cite comme tels dans sa documentation de connectivité de Defender.
+
+Les versions antérieures à la v5.4.1 les bloquaient comme « télémétrie ». C'était une erreur : renvoyés vers `0.0.0.0`, Defender ne peut plus joindre son service cloud, et rien à l'écran ne le signale. La documentation de Microsoft indique que bloquer `wdcp.microsoft.com` revient à ce que l'appareil n'utilise plus la protection basée sur le cloud. Depuis la v5.4.1, les deux domaines sont en liste blanche, ne peuvent plus être ajoutés à la liste de blocage, et `-SelfTest` échoue si cela arrive.
+
+### À quoi sert la protection cloud, et pourquoi il vaut mieux la garder active
+
+La protection **locale** de Defender (signatures, analyse en temps réel, surveillance comportementale) continue de fonctionner sans le cloud. La protection cloud ajoute une couche pour ce qui est **nouveau ou inconnu** :
+
+- Quand un fichier ou un comportement paraît suspect sans figurer dans les signatures locales, Defender envoie des **métadonnées** à Microsoft et obtient un verdict en quelques secondes — souvent avant qu'une signature existe pour cette menace.
+- Associée à l'envoi automatique d'échantillons, elle active **Block at First Sight**, la fonction que Microsoft décrit comme détectant et bloquant un nouveau malware en quelques secondes.
+- Les mises à jour de signatures arrivent par Windows Update, pas par ces deux domaines. Un Defender « à jour » reste donc exposé pendant le délai entre l'apparition d'une menace et la publication de sa signature — exactement l'intervalle que couvre le cloud.
+
+Ce script vise à réduire la télémétrie **sans affaiblir la sécurité** : il laisse donc la protection cloud tranquille. Pour la plupart des utilisateurs, la confidentialité gagnée en la coupant est faible comparée à la protection perdue. Pour limiter malgré tout les données envoyées à Microsoft, le faire dans les réglages de Defender (voir [Réduire la télémétrie de Defender](#réduire-la-télémétrie-de-defender)) plutôt que dans `hosts` : une entrée hosts ne bloque que les noms exacts qu'elle liste, alors que Microsoft documente des domaines génériques (jokers) pour ce service.
+
+> Ce script ne modifie aucun réglage de Defender. Après un « Appliquer » réel, il se contente de *lire* les exclusions de Defender pour afficher un message d'information.
+
+### Vérifier sa protection Defender
+
+Ouvrir PowerShell **en administrateur** (certaines valeurs sont masquées sinon) et lancer :
+
+```powershell
+Get-MpPreference | Select-Object MAPSReporting, SubmitSamplesConsent, CloudBlockLevel, CloudExtendedTimeout, PUAProtection, DisableRealtimeMonitoring | Format-List
+```
+
+Lecture du résultat :
+
+| Réglage | Valeur | Signification |
+|---|---|---|
+| `MAPSReporting` | `0` | Protection cloud **désactivée** |
+| | `1` | Adhésion de base (informations de base sur les logiciels détectés) |
+| | `2` | Adhésion avancée (plus d'informations : emplacement, noms de fichiers, comportement) |
+| `SubmitSamplesConsent` | `0` | Toujours demander avant d'envoyer un échantillon |
+| | `1` | Envoyer automatiquement les échantillons « sûrs » (sans données personnelles) ; demander sinon |
+| | `2` | **Ne jamais** envoyer d'échantillons — désactive aussi Block at First Sight |
+| | `3` | Envoyer tous les échantillons automatiquement |
+| `CloudBlockLevel` | `0` | Par défaut |
+| | `2` / `4` | Élevé / Élevé+ (blocage plus agressif selon les verdicts cloud) |
+| | `6` | Tolérance zéro — bloque les programmes inconnus, y compris des logiciels légitimes |
+| `CloudExtendedTimeout` | `0`–`50` | Secondes supplémentaires pendant lesquelles Defender peut retenir un fichier suspect en attendant le verdict cloud (nécessite Block at First Sight) |
+| `PUAProtection` | `0` / `1` / `2` | Désactivée / **Activée** (bloque les applications potentiellement indésirables) / Mode audit |
+| `DisableRealtimeMonitoring` | `False` | Protection en temps réel **active** (c'est ce qu'il faut) |
+
+Une configuration saine ressemble à : `MAPSReporting` 1 ou 2, `SubmitSamplesConsent` 1, `PUAProtection` 1, `DisableRealtimeMonitoring` False. `CloudBlockLevel` et `CloudExtendedTimeout` relèvent du durcissement optionnel.
+
+Deux autres vérifications utiles :
+
+```powershell
+# Protection contre les falsifications, temps réel, date de la dernière mise à jour des signatures
+Get-MpComputerStatus | Select-Object IsTamperProtected, RealTimeProtectionEnabled, AntivirusSignatureLastUpdated | Format-List
+
+# Defender peut-il réellement joindre son service cloud ? (PowerShell administrateur)
+& "$env:ProgramFiles\Windows Defender\MpCmdRun.exe" -ValidateMapsConnection
+```
+
+La dernière commande doit se terminer par *« successfully established a connection to MAPS »*. Si elle échoue avec `0x80070005`, PowerShell n'est pas lancé en administrateur. Si elle échoue avec une autre erreur, vérifier que `Resolve-DnsName wdcp.microsoft.com` ne renvoie **pas** `0.0.0.0` (sinon quelque chose dans `hosts` le bloque encore — lancer l'option `[3]` Mettre à jour de ce script, qui n'écrit plus ces deux lignes). Si `MpCmdRun.exe` est introuvable, regarder dans `C:\ProgramData\Microsoft\Windows Defender\Platform\<version>\`.
+
+### Réduire la télémétrie de Defender
+
+Chaque étape ci-dessous coûte un peu de protection : à choisir en connaissance de cause. Toutes les commandes nécessitent un PowerShell administrateur. Si `IsTamperProtected` vaut `True`, Windows peut refuser ces modifications : désactiver temporairement la Protection contre les falsifications dans *Sécurité Windows → Protection contre les virus et menaces → Paramètres de protection contre les virus et menaces*, puis la réactiver.
+
+| Objectif | Commande | Ce qui est perdu |
+|---|---|---|
+| Envoyer moins d'informations (garder le cloud) | `Set-MpPreference -MAPSReporting 1` | Moins de détails envoyés à Microsoft ; l'efficacité complète de Block at First Sight en mode de base n'est pas documentée (les instructions de Microsoft pour cette fonction utilisent le mode avancé) |
+| Ne jamais envoyer de fichiers | `Set-MpPreference -SubmitSamplesConsent 2` | **Block at First Sight est désactivé** ; les fichiers inconnus sont jugés sur leurs métadonnées seules. Les métadonnées restent envoyées lors d'une détection |
+| Aucun cloud | `Set-MpPreference -MAPSReporting 0` | Plus de verdicts cloud, plus de Block at First Sight — **déconseillé** |
+
+Pour revenir aux valeurs recommandées : `Set-MpPreference -MAPSReporting 2 -SubmitSamplesConsent 1`.
+
+### Renforcer Defender
+
+```powershell
+Set-MpPreference -MAPSReporting 2 -SubmitSamplesConsent 1 -CloudBlockLevel 4 -CloudExtendedTimeout 50 -PUAProtection 1 -DisableBlockAtFirstSeen $false
+```
+
+- `-CloudBlockLevel 4` (Élevé+) bloque plus agressivement selon les verdicts cloud ; le niveau `6` (tolérance zéro) est déconseillé au quotidien car il peut bloquer des programmes légitimes jamais exécutés auparavant.
+- `-CloudExtendedTimeout 50` laisse Defender attendre jusqu'à 50 secondes supplémentaires un verdict sur un fichier suspect : meilleure détection, mais le premier lancement d'un programme inconnu peut être plus long.
+- Vérifier aussi dans *Sécurité Windows → Protection contre les virus et menaces → Paramètres* que **Protection en temps réel**, **Protection fournie par le cloud**, **Envoi automatique d'échantillons** et **Protection contre les falsifications** sont activés, et laisser Windows Update fonctionner.
+
+Le comportement et les valeurs par défaut de Defender sont définis par Microsoft et peuvent changer selon les versions de Windows ; voir la documentation Microsoft sur *cloud protection and sample submission* et *block at first sight*.
 
 ---
 
@@ -250,7 +338,7 @@ Utiliser l'option de menu **[1]** à tout moment pour afficher la liste complèt
    .\Block-Telemetry.ps1 -SelfTest
    ```
 
-   Exécute 9 vérifications : la liste blanche n'a pas de doublons internes, aucun domaine n'est à la fois bloqué et en liste blanche, la correspondance de la liste blanche est exacte (pas par sous-domaine), `Get-DomainsToBlock` retourne une liste non vide, la liste de domaines se construit sans doublon, les deux marqueurs sont distincts, `Get-IntegrityStatus`/`Test-IsAlreadyBlocked` s'exécutent sans lever d'exception, et aucun domaine bloqué ne se trouve sur un suffixe d'hébergement cloud partagé (`*.storage.googleapis.com`, `*.amazonaws.com`, `*.blob.core.windows.net`, `*.azureedge.net`...) sans avoir été vérifié à la main. Le script quitte ensuite sans avoir touché à aucun fichier.
+   Exécute 10 vérifications : la liste blanche n'a pas de doublons internes, aucun domaine n'est à la fois bloqué et en liste blanche, la correspondance de la liste blanche est exacte (pas par sous-domaine), `Get-DomainsToBlock` retourne une liste non vide, la liste de domaines se construit sans doublon, les deux marqueurs sont distincts, `Get-IntegrityStatus`/`Test-IsAlreadyBlocked` s'exécutent sans lever d'exception, et aucun domaine bloqué ne se trouve sur un suffixe d'hébergement cloud partagé (`*.storage.googleapis.com`, `*.amazonaws.com`, `*.blob.core.windows.net`, `*.azureedge.net`...) sans avoir été vérifié à la main, et les points de terminaison de la protection cloud Defender (`wdcp` / `wdcpalt`) sont en liste blanche et non bloqués. Le script quitte ensuite sans avoir touché à aucun fichier.
 
 5. Lancer le script normalement (il demandera l'élévation) :
 
@@ -319,7 +407,7 @@ Tous les écrans partagent le même langage visuel : bandeaux encadrés, titres 
 
 | Paramètre | Description |
 |---|---|
-| `-SelfTest` | Exécute les 9 vérifications logiques en lecture seule décrites dans [Premier lancement](#premier-lancement-pas-à-pas) puis quitte. Aucun droit admin requis, aucun fichier touché. |
+| `-SelfTest` | Exécute les 10 vérifications logiques en lecture seule décrites dans [Premier lancement](#premier-lancement-pas-à-pas) puis quitte. Aucun droit admin requis, aucun fichier touché. |
 
 Toutes les autres actions (appliquer, mettre à jour, simuler, restaurer, rapports, exports) passent par le menu — il n'existe volontairement pas de paramètres CLI équivalents, puisqu'il s'agit de modifications durables d'un fichier système plutôt que de tâches de maintenance ponctuelles.
 
@@ -373,6 +461,18 @@ Corrigé en v5.3.1. Les versions précédentes bloquaient `discord-attachments-u
 </details>
 
 <details>
+<summary><strong>Windows Defender signale ou supprime le blocage dans mon fichier hosts</strong></summary>
+
+Windows Defender considère un fichier `hosts` qui renvoie des domaines **Microsoft** vers `0.0.0.0` comme une modification potentiellement indésirable (`SettingsModifier:Win32/HostsFileHijack`). Si « Supprimer » ou « Quarantaine » est choisi, `hosts` est remis à sa valeur Windows par défaut et le blocage disparaît. C'est un comportement de Defender, pas un bug du script, et le script ne peut pas l'éviter tant qu'il bloque des domaines de télémétrie Microsoft. Le contournement documenté par Microsoft est d'exclure le fichier `hosts` des analyses, mais **une exclusion empêche aussi Defender de remarquer toute autre modification de ce fichier** (y compris par un malware) : le script ne l'ajoute donc jamais à la place de l'utilisateur, c'est sa décision. Si le fichier est exclu, lancer l'option `[A]` de temps en temps pour vérifier que le blocage est intact. Autre solution pour éviter le problème : bloquer la télémétrie au niveau DNS (NextDNS, Pi-hole, routeur) plutôt que dans `hosts`.
+</details>
+
+<details>
+<summary><strong>La protection cloud de Defender ne fonctionne plus (corrigé en v5.4.1)</strong></summary>
+
+Les versions précédentes bloquaient `wdcp.microsoft.com` et `wdcpalt.microsoft.com` comme « télémétrie », alors que ce sont les points de terminaison de la protection fournie par le cloud de Defender (MAPS). Renvoyés vers `0.0.0.0`, Defender garde sa protection locale mais perd, sans rien afficher, le verdict cloud sur les fichiers récents ou inconnus. Ils sont maintenant en liste blanche. Pour réparer une machine déjà touchée, mettre le script à jour puis lancer l'option `[3]` (Mettre à jour). Vérification dans un PowerShell **administrateur** : `Resolve-DnsName wdcp.microsoft.com` ne doit plus renvoyer `0.0.0.0`, et `& "$env:ProgramFiles\Windows Defender\MpCmdRun.exe" -ValidateMapsConnection` doit réussir.
+</details>
+
+<details>
 <summary><strong>L'option [A] signale des domaines manquants ou en trop</strong></summary>
 
 "Manquant" signifie qu'un domaine de la liste actuelle du script n'est pas présent dans le bloc actif — généralement parce que le script a été mis à jour avec de nouveaux domaines depuis la dernière application du bloc. Utiliser l'option `[3]` (Mettre à jour) pour resynchroniser. "En trop" signifie que quelque chose se trouve dans le bloc que la liste actuelle du script n'attend pas — peut venir d'une modification manuelle ou d'un décalage de version plus récente/ancienne ; l'option `[3]` résout aussi ce cas en reconstruisant le bloc depuis zero.
@@ -387,7 +487,7 @@ Le script vide automatiquement le cache DNS après chaque modification réelle (
 <details>
 <summary><strong>-SelfTest signale un FAIL</strong></summary>
 
-Les 9 vérifications sont des contrôles de cohérence interne sur les listes de domaines/liste blanche elles-mêmes (doublons, contradictions, logique de correspondance exacte, domaines cloud partagés non vérifiés) — un FAIL ici signifie que les listes de domaines ont été modifiées d'une manière qui a introduit une incohérence, pas un problème au niveau du système. Lire le detail affiche par la vérification pour identifier le domaine ou le nombre concerne.
+Les 10 vérifications sont des contrôles de cohérence interne sur les listes de domaines/liste blanche elles-mêmes (doublons, contradictions, logique de correspondance exacte, domaines cloud partagés non vérifiés) — un FAIL ici signifie que les listes de domaines ont été modifiées d'une manière qui a introduit une incohérence, pas un problème au niveau du système. Lire le detail affiche par la vérification pour identifier le domaine ou le nombre concerne.
 </details>
 
 <details>
