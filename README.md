@@ -28,6 +28,7 @@ More screenshots (integrity check, backups list, full HTML report) in the [`scre
 - [How it works](#how-it-works)
 - [What gets blocked](#what-gets-blocked)
 - [What is never blocked (whitelist)](#what-is-never-blocked-whitelist)
+- [Windows Defender cloud protection](#windows-defender-cloud-protection)
 - [Safety guarantees](#safety-guarantees)
 - [Prerequisites](#prerequisites)
 - [First run](#first-run-step-by-step)
@@ -77,16 +78,16 @@ The script runs as an **interactive menu** — there is no one-shot "just clean 
 
 ## What gets blocked
 
-15 categories, **227 domains** in total:
+15 categories, **225 domains** in total:
 
 <img src="https://raw.githubusercontent.com/NephVx2/Block-Telemetry/main/screenshots/08-categories-covered.png?v=5.4.0" width="600">
 
 <details>
-<summary><strong>Microsoft Telemetry</strong> — 80 domains</summary>
+<summary><strong>Microsoft Telemetry</strong> — 78 domains</summary>
 
-Windows diagnostic data (DiagTrack / vortex / watson pipelines), Office/ARIA telemetry pipeline, Windows Defender **cloud telemetry only** (not local protection), MSN/Cortana/Bing ad and suggestion endpoints, Xbox/Game Bar telemetry, OneDrive telemetry (not sync), Teams telemetry (not communication).
+Windows diagnostic data (DiagTrack / vortex / watson pipelines), Office/ARIA telemetry pipeline, old MAPS/"SpyNet" Defender hostnames (`spynet*`, kept blocked but unverified — see the script comments), the Windows Live/OneDrive endpoint `ssw.live.com`, MSN/Cortana/Bing ad and suggestion endpoints, Xbox/Game Bar telemetry, OneDrive telemetry (not sync), Teams telemetry (not communication).
 
-*Excluded on purpose:* `windowsupdate.com`, `update.microsoft.com`, `msftconnecttest.com` (required for updates and connectivity detection).
+*Excluded on purpose:* `windowsupdate.com`, `update.microsoft.com`, `msftconnecttest.com` (required for updates and connectivity detection), and `wdcp.microsoft.com` / `wdcpalt.microsoft.com` (Microsoft Defender cloud-delivered protection — see [Windows Defender cloud protection](#windows-defender-cloud-protection)).
 </details>
 
 <details>
@@ -169,10 +170,11 @@ Use menu option **[1]** at any time to print the complete, current list grouped 
 
 ## What is never blocked (whitelist)
 
-**72 domains** are hard-coded into an absolute whitelist, checked by **exact match only** (never a substring/subdomain match — see the SelfTest section) — even if one somehow ended up in the telemetry list by mistake, it would never be written to `hosts`:
+**74 domains** are hard-coded into an absolute whitelist, checked by **exact match only** (never a substring/subdomain match — see the SelfTest section) — even if one somehow ended up in the telemetry list by mistake, it would never be written to `hosts`:
 
 - Adobe activation, licensing, registration (`activate.adobe.com`, `genuine.adobe.com`, `lcs-cops.adobe.com`...)
 - Microsoft Windows Update, activation, sign-in (`update.microsoft.com`, `login.microsoftonline.com`, `msftconnecttest.com`...)
+- Microsoft Defender cloud-delivered protection (`wdcp.microsoft.com`, `wdcpalt.microsoft.com`)
 - OneDrive sync, Xbox Live auth, Teams communication
 - NextDNS (critical DNS service)
 - Spotify streaming/auth/API, `scdn.co` CDN
@@ -180,6 +182,92 @@ Use menu option **[1]** at any time to print the complete, current list grouped 
 - Steam platform and anti-cheat, NVIDIA/AMD driver updates
 - Discord (chat, CDN and attachment uploads — `discord-attachments-uploads-prd.storage.googleapis.com`), GOG Galaxy, Visual Studio Code updates
 - Epic Games (kept whitelisted as a zero-cost precaution even though not actively used, to avoid an accidental block if the list is reused or extended on another machine later)
+
+---
+
+## Windows Defender cloud protection
+
+### Why `wdcp.microsoft.com` and `wdcpalt.microsoft.com` are never blocked
+
+These two hostnames are the endpoints of Microsoft Defender Antivirus **cloud-delivered protection**, also called **MAPS** (*Microsoft Active Protection Service*, formerly *SpyNet*). Microsoft lists them as such in its Defender connectivity documentation.
+
+Versions before v5.4.1 blocked them as "telemetry". That was a mistake: with both pointed at `0.0.0.0`, Defender can no longer reach its cloud service, and nothing on screen tells you. Microsoft's documentation states that blocking `wdcp.microsoft.com` means the device no longer uses cloud-based protection. Since v5.4.1 both domains are in the whitelist, can never be re-added to the blocklist, and `-SelfTest` fails if that ever happens.
+
+### What cloud protection does, and why it is better to keep it on
+
+Defender's **local** protection (signatures, real-time scanning, behavior monitoring) keeps working without the cloud. Cloud protection adds a layer for what is **new or unknown**:
+
+- When a file or behavior looks suspicious but is not in the local signatures, Defender sends **metadata** to Microsoft and gets a verdict within seconds — often before any signature exists for that threat.
+- Combined with automatic sample submission, it enables **Block at First Sight**, the feature Microsoft describes as detecting new malware and blocking it within seconds.
+- Signature updates come from Windows Update, not from these two domains. A Defender that is "up to date" can therefore still be exposed during the delay between a new threat appearing and its signature being published — exactly the gap the cloud covers.
+
+This script exists to reduce telemetry **without weakening your security**, so it leaves cloud protection alone. For most users, the privacy gained by cutting it off is small compared with the protection lost. If you really want less data sent to Microsoft, do it in Defender's own settings (see [Reduce Defender telemetry](#reduce-defender-telemetry)), not with `hosts`: a hosts entry only blocks the exact names it lists, while Microsoft documents wildcard domains for this service.
+
+> This script never changes any Defender setting. After a real "Apply" it only *reads* your Defender exclusions to show an informational notice.
+
+### Check your Defender protection
+
+Open PowerShell **as administrator** (some values are hidden otherwise) and run:
+
+```powershell
+Get-MpPreference | Select-Object MAPSReporting, SubmitSamplesConsent, CloudBlockLevel, CloudExtendedTimeout, PUAProtection, DisableRealtimeMonitoring | Format-List
+```
+
+How to read the result:
+
+| Setting | Value | Meaning |
+|---|---|---|
+| `MAPSReporting` | `0` | Cloud protection **off** |
+| | `1` | Basic membership (basic information about detected software) |
+| | `2` | Advanced membership (more information: file locations, names, behavior) |
+| `SubmitSamplesConsent` | `0` | Always ask before sending a sample |
+| | `1` | Send "safe" samples automatically (files without personal data); ask otherwise |
+| | `2` | **Never** send samples — this also disables Block at First Sight |
+| | `3` | Send all samples automatically |
+| `CloudBlockLevel` | `0` | Default |
+| | `2` / `4` | High / High+ (more aggressive blocking on cloud verdicts) |
+| | `6` | Zero tolerance — blocks unknown programs, may block legitimate software |
+| `CloudExtendedTimeout` | `0`–`50` | Extra seconds Defender may hold a suspicious file while waiting for the cloud verdict (needs Block at First Sight) |
+| `PUAProtection` | `0` / `1` / `2` | Off / **On** (blocks potentially unwanted apps) / Audit mode |
+| `DisableRealtimeMonitoring` | `False` | Real-time protection is **on** (this is what you want) |
+
+A healthy configuration looks like: `MAPSReporting` 1 or 2, `SubmitSamplesConsent` 1, `PUAProtection` 1, `DisableRealtimeMonitoring` False. `CloudBlockLevel` and `CloudExtendedTimeout` are optional hardening.
+
+Two more useful checks:
+
+```powershell
+# Tamper Protection, real-time protection, date of the last signature update
+Get-MpComputerStatus | Select-Object IsTamperProtected, RealTimeProtectionEnabled, AntivirusSignatureLastUpdated | Format-List
+
+# Can Defender actually reach its cloud service? (administrator PowerShell)
+& "$env:ProgramFiles\Windows Defender\MpCmdRun.exe" -ValidateMapsConnection
+```
+
+The last command must end with *"successfully established a connection to MAPS"*. If it fails with `0x80070005`, PowerShell is not running as administrator. If it fails with another error, check that `Resolve-DnsName wdcp.microsoft.com` does **not** return `0.0.0.0` (that would mean something in `hosts` is still blocking it — run option `[3]` Update of this script, which no longer writes those two lines). If `MpCmdRun.exe` is not found, look in `C:\ProgramData\Microsoft\Windows Defender\Platform\<version>\`.
+
+### Reduce Defender telemetry
+
+Each step below costs some protection, so choose consciously. All commands need an administrator PowerShell. If `IsTamperProtected` is `True`, Windows may refuse these changes: temporarily turn Tamper Protection off in *Windows Security → Virus & threat protection → Virus & threat protection settings*, then turn it back on.
+
+| Goal | Command | What you lose |
+|---|---|---|
+| Send less information (keep the cloud) | `Set-MpPreference -MAPSReporting 1` | Less detail sent to Microsoft; whether Block at First Sight is fully effective in Basic mode is not documented (Microsoft's setup instructions for it use Advanced) |
+| Never upload files | `Set-MpPreference -SubmitSamplesConsent 2` | **Block at First Sight is disabled**; unknown files are judged on metadata only. Metadata is still sent for detections |
+| No cloud at all | `Set-MpPreference -MAPSReporting 0` | No cloud verdicts, no Block at First Sight — **not recommended** |
+
+To go back to the recommended values: `Set-MpPreference -MAPSReporting 2 -SubmitSamplesConsent 1`.
+
+### Strengthen Defender
+
+```powershell
+Set-MpPreference -MAPSReporting 2 -SubmitSamplesConsent 1 -CloudBlockLevel 4 -CloudExtendedTimeout 50 -PUAProtection 1 -DisableBlockAtFirstSeen $false
+```
+
+- `-CloudBlockLevel 4` (High+) blocks more aggressively on cloud verdicts; level `6` (zero tolerance) is not recommended for everyday use because it can block legitimate programs you have never run before.
+- `-CloudExtendedTimeout 50` lets Defender wait up to 50 extra seconds for a verdict on a suspicious file: better detection, but a first launch of an unknown program may take longer.
+- Also check in *Windows Security → Virus & threat protection → settings* that **Real-time protection**, **Cloud-delivered protection**, **Automatic sample submission** and **Tamper Protection** are all on, and keep Windows Update running.
+
+Defender behavior and defaults are defined by Microsoft and can change between Windows versions; see Microsoft's documentation on *cloud protection and sample submission* and *block at first sight*.
 
 ---
 
@@ -246,7 +334,7 @@ Use menu option **[1]** at any time to print the complete, current list grouped 
    .\Block-Telemetry.ps1 -SelfTest
    ```
 
-   Runs 9 checks: whitelist has no internal duplicates, no domain is both blocked and whitelisted, whitelist matching is exact (not by subdomain), `Get-DomainsToBlock` returns a non-empty list, the domain list builds without duplicates, the two markers are distinct, both `Get-IntegrityStatus` and `Test-IsAlreadyBlocked` run without throwing, and no blocked domain sits on a shared cloud-hosting suffix (`*.storage.googleapis.com`, `*.amazonaws.com`, `*.blob.core.windows.net`, `*.azureedge.net`...) unless it was reviewed by hand. The script then exits without touching any files.
+   Runs 10 checks: whitelist has no internal duplicates, no domain is both blocked and whitelisted, whitelist matching is exact (not by subdomain), `Get-DomainsToBlock` returns a non-empty list, the domain list builds without duplicates, the two markers are distinct, both `Get-IntegrityStatus` and `Test-IsAlreadyBlocked` run without throwing, no blocked domain sits on a shared cloud-hosting suffix (`*.storage.googleapis.com`, `*.amazonaws.com`, `*.blob.core.windows.net`, `*.azureedge.net`...) unless it was reviewed by hand, and the Defender cloud-protection endpoints (`wdcp` / `wdcpalt`) are whitelisted and not blocked. The script then exits without touching any files.
 
 5. Launch the script normally (it will prompt for elevation):
 
@@ -369,6 +457,18 @@ Fixed in v5.3.1. Earlier versions blocked `discord-attachments-uploads-prd.stora
 </details>
 
 <details>
+<summary><strong>Windows Defender flags or removes the block in my hosts file</strong></summary>
+
+Windows Defender treats a `hosts` file that points **Microsoft** domains to `0.0.0.0` as a potentially unwanted change (`SettingsModifier:Win32/HostsFileHijack`). If you choose "Remove" or "Quarantine", `hosts` is reset to the Windows default and the block disappears. This is Defender's behavior, not a bug of the script, and the script cannot avoid it while it blocks Microsoft telemetry domains. Microsoft's documented workaround is to exclude the `hosts` file from scans, but **an exclusion also stops Defender from noticing any other change to that file** (including by malware), so the script never adds it for you — it is your decision. If you do exclude it, run option `[A]` now and then to check the block is intact. Another way to avoid the issue entirely is to block telemetry at the DNS level (NextDNS, Pi-hole, router) instead of in `hosts`.
+</details>
+
+<details>
+<summary><strong>Defender's cloud protection stopped working (fixed in v5.4.1)</strong></summary>
+
+Earlier versions blocked `wdcp.microsoft.com` and `wdcpalt.microsoft.com` as "telemetry", but these are the endpoints of Defender's cloud-delivered protection (MAPS). With them pointed at `0.0.0.0`, Defender keeps its local protection but loses the cloud verdict on new or unknown files, silently. They are now whitelisted. To repair an already-affected machine, update the script and run option `[3]` (Update). You can check the result in an **administrator** PowerShell with `Resolve-DnsName wdcp.microsoft.com` (it must no longer return `0.0.0.0`) and `& "$env:ProgramFiles\Windows Defender\MpCmdRun.exe" -ValidateMapsConnection`.
+</details>
+
+<details>
 <summary><strong>Option [A] reports missing or extra domains</strong></summary>
 
 "Missing" means a domain from the current script's list isn't present in the active block — usually because the script was updated with new domains since the block was last applied. Use option `[3]` (Update) to resync. "Extra" means something is in the block that the current script's list doesn't expect — could be a manual edit or a newer/older version mismatch; option `[3]` also resolves this by rebuilding the block from scratch.
@@ -383,7 +483,7 @@ The script flushes the DNS cache automatically after every real change (or via o
 <details>
 <summary><strong>-SelfTest reports a FAIL</strong></summary>
 
-All 9 checks are internal consistency checks on the domain/whitelist lists themselves (duplicates, contradictions, exact-match logic, unreviewed shared-cloud domains) — a FAIL here means the domain lists were edited in a way that introduced an inconsistency, not a system-level problem. Read the check's `Detail` output for the specific domain or count involved.
+All 10 checks are internal consistency checks on the domain/whitelist lists themselves (duplicates, contradictions, exact-match logic, unreviewed shared-cloud domains) — a FAIL here means the domain lists were edited in a way that introduced an inconsistency, not a system-level problem. Read the check's `Detail` output for the specific domain or count involved.
 </details>
 
 <details>
