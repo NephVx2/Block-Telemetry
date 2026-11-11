@@ -191,87 +191,17 @@ Utiliser l'option de menu **[1]** à tout moment pour afficher la liste complèt
 
 ## Protection cloud de Windows Defender
 
-### Pourquoi `wdcp.microsoft.com` et `wdcpalt.microsoft.com` ne sont jamais bloqués
+`wdcp.microsoft.com` et `wdcpalt.microsoft.com` sont les points de terminaison de la **protection fournie par le cloud** de Microsoft Defender (MAPS). Les versions antérieures à la v5.4.1 les bloquaient comme « télémétrie », ce qui coupait Defender de ses verdicts cloud sans rien afficher. Ils sont maintenant en liste blanche, et `-SelfTest` échoue s'ils réapparaissent dans la liste de blocage. Ce script réduit la télémétrie **sans affaiblir la sécurité**, et ne modifie jamais aucun réglage de Defender.
 
-Ces deux noms d'hôte sont les points de terminaison de la **protection fournie par le cloud** de Microsoft Defender Antivirus, aussi appelée **MAPS** (*Microsoft Active Protection Service*, anciennement *SpyNet*). Microsoft les cite comme tels dans sa documentation de connectivité de Defender.
+La protection locale de Defender continue de fonctionner sans le cloud, mais le cloud ajoute en quelques secondes un verdict sur les fichiers **nouveaux ou inconnus**, souvent avant qu'une signature existe (c'est ce qui fait fonctionner *Block at First Sight*). Microsoft indique que bloquer `wdcp.microsoft.com` revient à ce que l'appareil n'utilise plus la protection basée sur le cloud.
 
-Les versions antérieures à la v5.4.1 les bloquaient comme « télémétrie ». C'était une erreur : renvoyés vers `0.0.0.0`, Defender ne peut plus joindre son service cloud, et rien à l'écran ne le signale. La documentation de Microsoft indique que bloquer `wdcp.microsoft.com` revient à ce que l'appareil n'utilise plus la protection basée sur le cloud. Depuis la v5.4.1, les deux domaines sont en liste blanche, ne peuvent plus être ajoutés à la liste de blocage, et `-SelfTest` échoue si cela arrive.
-
-### À quoi sert la protection cloud, et pourquoi il vaut mieux la garder active
-
-La protection **locale** de Defender (signatures, analyse en temps réel, surveillance comportementale) continue de fonctionner sans le cloud. La protection cloud ajoute une couche pour ce qui est **nouveau ou inconnu** :
-
-- Quand un fichier ou un comportement paraît suspect sans figurer dans les signatures locales, Defender envoie des **métadonnées** à Microsoft et obtient un verdict en quelques secondes — souvent avant qu'une signature existe pour cette menace.
-- Associée à l'envoi automatique d'échantillons, elle active **Block at First Sight**, la fonction que Microsoft décrit comme détectant et bloquant un nouveau malware en quelques secondes.
-- Les mises à jour de signatures arrivent par Windows Update, pas par ces deux domaines. Un Defender « à jour » reste donc exposé pendant le délai entre l'apparition d'une menace et la publication de sa signature — exactement l'intervalle que couvre le cloud.
-
-Ce script vise à réduire la télémétrie **sans affaiblir la sécurité** : il laisse donc la protection cloud tranquille. Pour la plupart des utilisateurs, la confidentialité gagnée en la coupant est faible comparée à la protection perdue. Pour limiter malgré tout les données envoyées à Microsoft, le faire dans les réglages de Defender (voir [Réduire la télémétrie de Defender](#réduire-la-télémétrie-de-defender)) plutôt que dans `hosts` : une entrée hosts ne bloque que les noms exacts qu'elle liste, alors que Microsoft documente des domaines génériques (jokers) pour ce service.
-
-> Ce script ne modifie aucun réglage de Defender. Après un « Appliquer » réel, il se contente de *lire* les exclusions de Defender pour afficher un message d'information.
-
-### Vérifier sa protection Defender
-
-Ouvrir PowerShell **en administrateur** (certaines valeurs sont masquées sinon) et lancer :
+Pour vérifier que Defender joint bien son service cloud (PowerShell administrateur) :
 
 ```powershell
-Get-MpPreference | Select-Object MAPSReporting, SubmitSamplesConsent, CloudBlockLevel, CloudExtendedTimeout, PUAProtection, DisableRealtimeMonitoring | Format-List
-```
-
-Lecture du résultat :
-
-| Réglage | Valeur | Signification |
-|---|---|---|
-| `MAPSReporting` | `0` | Protection cloud **désactivée** |
-| | `1` | Adhésion de base (informations de base sur les logiciels détectés) |
-| | `2` | Adhésion avancée (plus d'informations : emplacement, noms de fichiers, comportement) |
-| `SubmitSamplesConsent` | `0` | Toujours demander avant d'envoyer un échantillon |
-| | `1` | Envoyer automatiquement les échantillons « sûrs » (sans données personnelles) ; demander sinon |
-| | `2` | **Ne jamais** envoyer d'échantillons — désactive aussi Block at First Sight |
-| | `3` | Envoyer tous les échantillons automatiquement |
-| `CloudBlockLevel` | `0` | Par défaut |
-| | `2` / `4` | Élevé / Élevé+ (blocage plus agressif selon les verdicts cloud) |
-| | `6` | Tolérance zéro — bloque les programmes inconnus, y compris des logiciels légitimes |
-| `CloudExtendedTimeout` | `0`–`50` | Secondes supplémentaires pendant lesquelles Defender peut retenir un fichier suspect en attendant le verdict cloud (nécessite Block at First Sight) |
-| `PUAProtection` | `0` / `1` / `2` | Désactivée / **Activée** (bloque les applications potentiellement indésirables) / Mode audit |
-| `DisableRealtimeMonitoring` | `False` | Protection en temps réel **active** (c'est ce qu'il faut) |
-
-Une configuration saine ressemble à : `MAPSReporting` 1 ou 2, `SubmitSamplesConsent` 1, `PUAProtection` 1, `DisableRealtimeMonitoring` False. `CloudBlockLevel` et `CloudExtendedTimeout` relèvent du durcissement optionnel.
-
-Deux autres vérifications utiles :
-
-```powershell
-# Protection contre les falsifications, temps réel, date de la dernière mise à jour des signatures
-Get-MpComputerStatus | Select-Object IsTamperProtected, RealTimeProtectionEnabled, AntivirusSignatureLastUpdated | Format-List
-
-# Defender peut-il réellement joindre son service cloud ? (PowerShell administrateur)
 & "$env:ProgramFiles\Windows Defender\MpCmdRun.exe" -ValidateMapsConnection
 ```
 
-La dernière commande doit se terminer par *« successfully established a connection to MAPS »*. Si elle échoue avec `0x80070005`, PowerShell n'est pas lancé en administrateur. Si elle échoue avec une autre erreur, vérifier que `Resolve-DnsName wdcp.microsoft.com` ne renvoie **pas** `0.0.0.0` (sinon quelque chose dans `hosts` le bloque encore — lancer l'option `[3]` Mettre à jour de ce script, qui n'écrit plus ces deux lignes). Si `MpCmdRun.exe` est introuvable, regarder dans `C:\ProgramData\Microsoft\Windows Defender\Platform\<version>\`.
-
-### Réduire la télémétrie de Defender
-
-Chaque étape ci-dessous coûte un peu de protection : à choisir en connaissance de cause. Toutes les commandes nécessitent un PowerShell administrateur. Si `IsTamperProtected` vaut `True`, Windows peut refuser ces modifications : désactiver temporairement la Protection contre les falsifications dans *Sécurité Windows → Protection contre les virus et menaces → Paramètres de protection contre les virus et menaces*, puis la réactiver.
-
-| Objectif | Commande | Ce qui est perdu |
-|---|---|---|
-| Envoyer moins d'informations (garder le cloud) | `Set-MpPreference -MAPSReporting 1` | Moins de détails envoyés à Microsoft ; l'efficacité complète de Block at First Sight en mode de base n'est pas documentée (les instructions de Microsoft pour cette fonction utilisent le mode avancé) |
-| Ne jamais envoyer de fichiers | `Set-MpPreference -SubmitSamplesConsent 2` | **Block at First Sight est désactivé** ; les fichiers inconnus sont jugés sur leurs métadonnées seules. Les métadonnées restent envoyées lors d'une détection |
-| Aucun cloud | `Set-MpPreference -MAPSReporting 0` | Plus de verdicts cloud, plus de Block at First Sight — **déconseillé** |
-
-Pour revenir aux valeurs recommandées : `Set-MpPreference -MAPSReporting 2 -SubmitSamplesConsent 1`.
-
-### Renforcer Defender
-
-```powershell
-Set-MpPreference -MAPSReporting 2 -SubmitSamplesConsent 1 -CloudBlockLevel 4 -CloudExtendedTimeout 50 -PUAProtection 1 -DisableBlockAtFirstSeen $false
-```
-
-- `-CloudBlockLevel 4` (Élevé+) bloque plus agressivement selon les verdicts cloud ; le niveau `6` (tolérance zéro) est déconseillé au quotidien car il peut bloquer des programmes légitimes jamais exécutés auparavant.
-- `-CloudExtendedTimeout 50` laisse Defender attendre jusqu'à 50 secondes supplémentaires un verdict sur un fichier suspect : meilleure détection, mais le premier lancement d'un programme inconnu peut être plus long.
-- Vérifier aussi dans *Sécurité Windows → Protection contre les virus et menaces → Paramètres* que **Protection en temps réel**, **Protection fournie par le cloud**, **Envoi automatique d'échantillons** et **Protection contre les falsifications** sont activés, et laisser Windows Update fonctionner.
-
-Le comportement et les valeurs par défaut de Defender sont définis par Microsoft et peuvent changer selon les versions de Windows ; voir la documentation Microsoft sur *cloud protection and sample submission* et *block at first sight*.
+La commande doit se terminer par *« successfully established a connection to MAPS »*. Defender peut aussi signaler les entrées Microsoft de `hosts` et supprimer le blocage : voir [Dépannage](#dépannage).
 
 ---
 
@@ -469,7 +399,7 @@ Windows Defender considère un fichier `hosts` qui renvoie des domaines **Micros
 <details>
 <summary><strong>La protection cloud de Defender ne fonctionne plus (corrigé en v5.4.1)</strong></summary>
 
-Les versions précédentes bloquaient `wdcp.microsoft.com` et `wdcpalt.microsoft.com` comme « télémétrie », alors que ce sont les points de terminaison de la protection fournie par le cloud de Defender (MAPS). Renvoyés vers `0.0.0.0`, Defender garde sa protection locale mais perd, sans rien afficher, le verdict cloud sur les fichiers récents ou inconnus. Ils sont maintenant en liste blanche. Pour réparer une machine déjà touchée, mettre le script à jour puis lancer l'option `[3]` (Mettre à jour). Vérification dans un PowerShell **administrateur** : `Resolve-DnsName wdcp.microsoft.com` ne doit plus renvoyer `0.0.0.0`, et `& "$env:ProgramFiles\Windows Defender\MpCmdRun.exe" -ValidateMapsConnection` doit réussir.
+Les versions précédentes bloquaient `wdcp.microsoft.com` et `wdcpalt.microsoft.com`, les points de terminaison de la protection cloud de Defender : Defender perdait alors ses verdicts cloud sans rien afficher. Pour réparer : mettre le script à jour et lancer l'option `[3]` (Mettre à jour), puis vérifier, dans un PowerShell **administrateur**, que `Resolve-DnsName wdcp.microsoft.com` ne renvoie plus `0.0.0.0` et que `-ValidateMapsConnection` réussit.
 </details>
 
 <details>
