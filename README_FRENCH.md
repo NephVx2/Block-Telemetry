@@ -89,7 +89,7 @@ Le script fonctionne comme un **menu interactif** — il n'existe pas de command
 <details>
 <summary><strong>Microsoft Télémétrie</strong> — 78 domaines</summary>
 
-Données de diagnostic Windows (pipelines DiagTrack / vortex / watson), pipeline de télémétrie Office/ARIA, anciens noms MAPS/« SpyNet » de Defender (`spynet*`, laissés bloqués mais non vérifiés — voir les commentaires du script), point de terminaison Windows Live/OneDrive `ssw.live.com`, points de collecte publicitaires/suggestions MSN/Cortana/Bing, télémétrie Xbox/Game Bar, télémétrie OneDrive (pas la synchronisation), télémétrie Teams (pas la communication).
+Données de diagnostic Windows (pipelines DiagTrack / vortex / watson), pipeline de télémétrie Office/ARIA, anciens noms MAPS/« SpyNet » de Defender (`spynet*`, laissés bloqués d'après les constats des notes de version v5.4.1 : absents de la documentation de connectivité actuelle de Defender, mais non prouvés inutilisés — voir les commentaires du script et les notes de version), point de terminaison Windows Live/OneDrive `ssw.live.com`, points de collecte publicitaires/suggestions MSN/Cortana/Bing, télémétrie Xbox/Game Bar, télémétrie OneDrive (pas la synchronisation), télémétrie Teams (pas la communication).
 
 *Exclus volontairement :* `windowsupdate.com`, `update.microsoft.com`, `msftconnecttest.com` (nécessaires aux mises à jour et à la détection de connectivité), ainsi que `wdcp.microsoft.com` / `wdcpalt.microsoft.com` (protection fournie par le cloud de Microsoft Defender — voir [Protection cloud de Windows Defender](#protection-cloud-de-windows-defender)).
 </details>
