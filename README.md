@@ -85,7 +85,7 @@ The script runs as an **interactive menu** — there is no one-shot "just clean 
 <details>
 <summary><strong>Microsoft Telemetry</strong> — 78 domains</summary>
 
-Windows diagnostic data (DiagTrack / vortex / watson pipelines), Office/ARIA telemetry pipeline, old MAPS/"SpyNet" Defender hostnames (`spynet*`, kept blocked but unverified — see the script comments), the Windows Live/OneDrive endpoint `ssw.live.com`, MSN/Cortana/Bing ad and suggestion endpoints, Xbox/Game Bar telemetry, OneDrive telemetry (not sync), Teams telemetry (not communication).
+Windows diagnostic data (DiagTrack / vortex / watson pipelines), Office/ARIA telemetry pipeline, old MAPS/"SpyNet" Defender hostnames (`spynet*`, kept blocked on the evidence given in the v5.4.1 release notes: absent from Microsoft's current Defender connectivity documentation, but not proven unused — see the script comments and the release notes), the Windows Live/OneDrive endpoint `ssw.live.com`, MSN/Cortana/Bing ad and suggestion endpoints, Xbox/Game Bar telemetry, OneDrive telemetry (not sync), Teams telemetry (not communication).
 
 *Excluded on purpose:* `windowsupdate.com`, `update.microsoft.com`, `msftconnecttest.com` (required for updates and connectivity detection), and `wdcp.microsoft.com` / `wdcpalt.microsoft.com` (Microsoft Defender cloud-delivered protection — see [Windows Defender cloud protection](#windows-defender-cloud-protection)).
 </details>
